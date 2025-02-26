@@ -32,6 +32,31 @@ describe('gitJsonMerge', function () {
 		describeStripBomTest('[{"id":1,\uFEFF"field":"Foo"}]', '[{"id":1,\uFEFF"field":"Foo"}]');
 		describeStripBomTest('\uFEFF[{"id":1,"field":"Foo"}]\uFEFF', '[{"id":1,"field":"Foo"}]\uFEFF');
 	});
+
+	describe('Keep common string.', function() {
+		// All are identical
+		describeStringEquivalence(
+			'[{"id":1,"field":"Foo"}]',
+			'[{"id":1,"field":"Foo"}]',
+			'[{"id":1,"field":"Foo"}]',
+			'[{"id":1,"field":"Foo"}]'
+		);
+		// Ours and theirs have identical whitespace-only changes
+		describeStringEquivalence(
+			'[\n  {"id": 1,"field":"Foo"\n}\n]',
+			'[\n  {"id":1,"field":"Foo"}\n]',
+			'[\n  {"id": 1,"field":"Foo"\n}\n]',
+			'[\n  {"id": 1,"field":"Foo"\n}\n]'
+		);
+		// Ours and theirs have diverging whitespace-only changes
+		describeStringEquivalence(
+			'[{"id":1,"field":  "Foo"}]',
+			'[\n  {"id":1,"field":"Foo"}\n]',
+			'[\n  {"id": 1,"field":"Foo"\n}\n]',
+			'[\n  {"id":1,"field":"Foo"}\n]'
+		);
+	});
+
 });
 
 function toString (object) {
@@ -82,6 +107,16 @@ function describeStripBomTest (str, expected)  {
 
 		it('should return ' + expected.replace('\uFEFF', '<BOM>'), function () {
 			expect(actual).to.equal(expected);
+		})
+	});
+}
+
+function describeStringEquivalence (ours, base, theirs, expected)  {
+	describe('given arguments of ' + toString(ours) + ' as ours, ' + toString(base) + ' as base and '  + toString(theirs) + ' as theirs', function () {
+		var actual = gitJsonMerge.mergeJson(ours, base, theirs);
+
+		it('should return ' + toString(expected), function () {
+			expect(actual).to.deep.equal(expected);
 		})
 	});
 }
